@@ -297,29 +297,8 @@ chmod +x run.sh
 
 ---
 
-## 🚫 Common Pitfalls
-
-| Issue | Solution |
-|------|--------|
-| `could not open pk` | Ensure `pk` is built with `--host=riscv64-unknown-elf` and installed to the correct path |
-| `spike` not found | Confirm `$RISCV/bin` is in your `PATH` |
-| Program crashes or hangs | Always compile with `-static` |
-| Using Linux toolchain (`riscv64-linux-gnu-gcc`) | Don’t — `pk` doesn’t support glibc binaries |
-
----
-
-## 📚 References
-
-- [RISC-V GNU Toolchain](https://github.com/riscv/riscv-gnu-toolchain)
-- [Spike ISA Simulator](https://github.com/riscv/riscv-isa-sim)
-- [Proxy Kernel (`pk`)](https://github.com/riscv-software-src/riscv-pk)
-
----
-
-> ✅ All tools are installed **locally**. To uninstall, simply delete `$RISCV` and the source directories.
+✅ All tools are installed **locally**. To uninstall, simply delete `$RISCV` and the source directories.
 
 Happy RISC-V hacking! 💻🔬
 
 --- 
-
-Let me know if you'd like a version that also supports **RV32**, **debugging with GDB**, or **Linux kernel booting with `bbl`**!
