@@ -112,21 +112,9 @@ spike --log-commits pk csr_cycle
 
 ---
 
-### 📚 Next Step Preview: Traps & Interrupts (Step 4)
-
-Once you’re comfortable reading/writing **allowed CSRs**, you’ll:
-- Trigger a trap (e.g., `ecall`)
-- See how PK handles it
-- Learn how `mepc`, `mcause`, and `mtvec` work (in M-mode)
-- Eventually write your own minimal trap handler (beyond PK)
-
----
-
 ### ✅ Your Task Now
 
 1. **Run the `csr_cycle.c` example** and verify it works.
 2. **Try reading `time`** using `rdtime` (similar to `rdcycle`).
 3. **Attempt to read `mstatus`** and observe the illegal instruction trap.
 4. **Check the RISC-V Privileged Spec** (Section 2.8 and 3.1) for CSR descriptions.
-
-When you’re done or have questions (e.g., “Why can I read `cycle` but not `mstatus`?”), let me know—we’ll move to **Step 4: Traps and Interrupts**.
