@@ -1,7 +1,7 @@
 # Control and Status Registers (CSRs)
 
 ### 📌 What Are CSRs?
-CSRs (**Control and Status Registers**) are special-purpose registers in RISC-V that control or report the processor state. They are **not part of the general-purpose register file (x0–x31)** and are accessed via special instructions:
+[CSRs (**Control and Status Registers**)](https://docs.openhwgroup.org/projects/cv32e40s-user-manual/en/latest/control_status_registers.html#control-and-status-register-map) are special-purpose registers in RISC-V that control or report the processor state. They are **not part of the general-purpose register file (x0–x31)** and are accessed via special instructions:
 - `csrrw rd, csr, rs1` — CSR read/write -> Read CSR into rd
 - `csrrs rd, csr, rs1` — CSR read and set bits
 - `csrrc rd, csr, rs1` — CSR read and clear bits
