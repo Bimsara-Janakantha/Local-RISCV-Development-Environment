@@ -26,6 +26,8 @@ Since we’re using **Spike + PK**, our user program runs in **U-mode**, and **P
 
 > In your current setup (**Spike + PK**), **all traps go to PK’s M-mode handler**.
 
+[Trap codes](https://dram.page/riscv-trap/)
+
 ---
 
 ### 🔍 How `ecall` Works (Your First Trap)
