@@ -156,5 +156,3 @@ You’ll see periodic `trap` entries with `mcause = 0x8000000000000007` (machine
 4. **Read RISC-V Privileged Spec, Section 3.1.6 (Trap Handling)**.
 
 Once you’re comfortable with how traps are **taken** and **handled by PK**, we’ll move to **Step 5: Writing Your Own Minimal Trap Handler** (optional but powerful) or directly to **Step 6: Cycle Measurement for Context Switching**—let me know your preference!
-
-Are you ready to try observing a real trap in Spike, or should we first clarify any concept (e.g., `mcause` encoding, `mret`, delegation)?
