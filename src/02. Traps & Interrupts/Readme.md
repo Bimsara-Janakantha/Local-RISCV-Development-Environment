@@ -1,14 +1,14 @@
 # Traps and Interrupts
 
-### 🎯 [What Are Traps](https://osblog.stephenmarz.com/ch4.html)
+### 🎯 What Are Traps
 
-In RISC-V, a **trap** is a general term for any **synchronous exception** (e.g., illegal instruction, `ecall`) or **asynchronous interrupt** (e.g., timer, external). When a trap occurs, the processor:
+In RISC-V, a **[trap](https://osblog.stephenmarz.com/ch4.html)** is a general term for any **synchronous exception** (e.g., illegal instruction, `ecall`) or **asynchronous interrupt** (e.g., timer, external). When a trap occurs, the processor:
 1. **Saves** the current program counter (PC) to a CSR (`mepc` or `sepc`).
 2. **Records** the trap cause in `mcause`/`scause`.
 3. **Disables** further interrupts (via `mstatus.MIE` or `sstatus.SIE`).
 4. **Jumps** to a **trap handler** whose address is in `mtvec`/`stvec`.
 
-> 🔑 **Key idea**: Traps transfer control from a lower privilege mode (e.g., U) to a higher one (e.g., M or S).
+> **Key idea**: Traps transfer control from a lower privilege mode (e.g., U) to a higher one (e.g., M or S).
 
 Since we’re using **Spike + PK**, our user program runs in **U-mode**, and **PK runs in M-mode** and handles all traps on our behalf.
 
@@ -24,20 +24,33 @@ Since we’re using **Spike + PK**, our user program runs in **U-mode**, and **P
 | **Machine Timer Interrupt** | `mtip` set | ❌ No | M-mode |
 | **External Interrupt** | I/O event | ❌ No | M-mode |
 
-> In your current setup (**Spike + PK**), **all traps go to PK’s M-mode handler**.
-
-[Trap codes](https://dram.page/riscv-trap/)
+> In our current setup (**Spike + PK**), **all traps go to PK’s M-mode handler**.
 
 ---
 
-### 🔍 How `ecall` Works (Your First Trap)
+### 🔑 Trap Control Registers
+
+[Trap Codes](https://dram.page/riscv-trap/)
+- `mtvec`: machine trap vector (base address of trap handler)
+- `mepc`: machine exception program counter (return address)
+- `mcause`: encodes the reason (interrupt or exception)
+- `mtval`: extra info (e.g., bad address)
+- `mstatus`: interrupt-enable bits and privilege state
+
+---
+
+### 🔍 Trap Handling Flow
 
 When your C program calls `printf()`, `exit()`, or even `_exit()`, it eventually triggers an **`ecall` instruction** from **user mode**.
 
-1. CPU traps to **M-mode** (since PK runs in M-mode).
-2. PK sees `mcause = 8 + 0` (8 = user environment call).
-3. PK emulates the system call (e.g., writes to host stdout).
-4. PK executes `mret` to return to user mode at `mepc`.
+1. Trap triggered: CPU detects an exception or interrupt.
+2. Save context:
+    - mepc ← current PC
+    - mcause ← trap cause
+    - mtval ← faulting address/info (if any)
+3. Jump to handler: PC ← mtvec
+4. Execute trap handler: handle event; possibly schedule a task (e.g., timer interrupt).
+5. Return: mret; PC ← mepc; restore privilege and interrupts.
 
 ---
 
