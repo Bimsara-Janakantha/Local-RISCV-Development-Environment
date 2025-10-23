@@ -53,7 +53,7 @@ When your C program calls `printf()`, `exit()`, or even `_exit()`, it eventually
 
 ### 🧪 Practical: Trigger an `ecall` Manually
 
-Create `ecall_test.c`:
+Create `ecall_exit.c`:
 
 ```c
 #include <stdio.h>
@@ -75,8 +75,8 @@ int main() {
 
 Compile and run:
 ```bash
-riscv64-unknown-linux-gnu-gcc -o ecall_test ecall_test.c
-spike pk ecall_test
+riscv64-unknown-linux-gnu-gcc -o ecall_exit ecall_exit.c
+spike pk ecall_exit
 ```
 
 ✅ Output:
@@ -94,7 +94,7 @@ About to trigger ecall...
 Run in debug mode to see the trap:
 
 ```bash
-spike -d pk ecall_test
+spike -d pk ecall_exit
 ```
 
 In the debugger:
