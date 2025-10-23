@@ -100,8 +100,8 @@ spike -d pk ecall_exit
 In the debugger:
 ```
 : until pc 0 0x00010xxx   # get close to ecall
-: r                        # view registers
-: until inst 0 ecall       # run until ecall instruction
+: r                       # view registers
+: until inst 0 ecall      # run until ecall instruction
 ```
 
 After `ecall`:
@@ -162,7 +162,7 @@ You’ll see periodic `trap` entries with `mcause = 0x8000000000000007` (machine
 
 ### ✅ Your Task Now
 
-1. **Run `ecall_test.c`** and confirm it works.
+1. **Run `ecall_exit.c`** and confirm it works.
 2. **Use `spike -d`** to observe `mepc` and `mcause` right after the `ecall`.
 3. **Modify the program** to trigger an **illegal instruction** (e.g., `.word 0x0` in inline asm) and see how PK handles it (should exit with error).
 4. **Read RISC-V Privileged Spec, Section 3.1.6 (Trap Handling)**.
