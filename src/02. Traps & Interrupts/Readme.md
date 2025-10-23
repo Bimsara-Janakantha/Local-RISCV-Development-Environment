@@ -154,5 +154,3 @@ You’ll see periodic `trap` entries with `mcause = 0x8000000000000007` (machine
 2. **Use `spike -d`** to observe `mepc` and `mcause` right after the `ecall`.
 3. **Modify the program** to trigger an **illegal instruction** (e.g., `.word 0x0` in inline asm) and see how PK handles it (should exit with error).
 4. **Read RISC-V Privileged Spec, Section 3.1.6 (Trap Handling)**.
-
-Once you’re comfortable with how traps are **taken** and **handled by PK**, we’ll move to **Step 5: Writing Your Own Minimal Trap Handler** (optional but powerful) or directly to **Step 6: Cycle Measurement for Context Switching**—let me know your preference!
