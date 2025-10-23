@@ -2,10 +2,14 @@
 
 ### 📌 What Are CSRs?
 [CSRs (**Control and Status Registers**)](https://docs.openhwgroup.org/projects/cv32e40s-user-manual/en/latest/control_status_registers.html#control-and-status-register-map) are special-purpose registers in RISC-V that control or report the processor state. They are **not part of the general-purpose register file (x0–x31)** and are accessed via special instructions:
-- `csrrw rd, csr, rs1` — CSR read/write -> Read CSR into rd
+- `csrrw rd, csr, rs1` — CSR read/write
 - `csrrs rd, csr, rs1` — CSR read and set bits
 - `csrrc rd, csr, rs1` — CSR read and clear bits
 - Pseudo-instructions like `csrr rd, csr` and `csrw csr, rs1` are commonly used.
+    - `csrr rd, csr` ⟶ Read CSR into rd
+    - `csrw csr, rs` ⟶ Write rs into CSR
+    - `csrs csr, rs` ⟶ Set bits in CSR (logical OR)
+    - `csrc csr, rs` ⟶ Clear bits in CSR (logical AND NOT)
 
 CSRs are **privilege-level sensitive**:  
 - **User mode (U)**: Very limited CSR access (e.g., `cycle`, `time` if delegated).
@@ -16,7 +20,7 @@ CSRs are **privilege-level sensitive**:
 
 ---
 
-### ✅ Key CSRs You Should Know
+### ✅ Key CSRs 
 
 | CSR | Address | Mode | Purpose |
 |-----|---------|------|--------|
