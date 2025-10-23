@@ -1,6 +1,6 @@
 # Traps and Interrupts
 
-### 🎯 What Are Traps
+### 🎯 [What Are Traps](https://osblog.stephenmarz.com/ch4.html)
 
 In RISC-V, a **trap** is a general term for any **synchronous exception** (e.g., illegal instruction, `ecall`) or **asynchronous interrupt** (e.g., timer, external). When a trap occurs, the processor:
 1. **Saves** the current program counter (PC) to a CSR (`mepc` or `sepc`).
