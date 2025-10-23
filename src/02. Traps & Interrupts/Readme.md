@@ -43,14 +43,11 @@ Since we’re using **Spike + PK**, our user program runs in **U-mode**, and **P
 
 When your C program calls `printf()`, `exit()`, or even `_exit()`, it eventually triggers an **`ecall` instruction** from **user mode**.
 
-1. Trap triggered: CPU detects an exception or interrupt.
-2. Save context:
-    - mepc ← current PC
-    - mcause ← trap cause
-    - mtval ← faulting address/info (if any)
-3. Jump to handler: PC ← mtvec
-4. Execute trap handler: handle event; possibly schedule a task (e.g., timer interrupt).
-5. Return: mret; PC ← mepc; restore privilege and interrupts.
+1. CPU traps to **M-mode** (since PK runs in M-mode).
+2. PK sees `mcause = 8 + 0` (8 = user environment call).
+3. PK emulates the system call (e.g., writes to host stdout).
+4. PK executes `mret` to return to user mode at `mepc`.
+
 
 ---
 
