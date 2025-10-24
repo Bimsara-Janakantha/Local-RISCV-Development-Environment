@@ -32,7 +32,9 @@ Use `rdcycle` **before and after** an `ecall` to capture total overhead.
 
 But note: **We can’t put `rdcycle` *after* `ecall` if `ecall` terminates the program** (like `exit`). So use a **non-terminating syscall**.
 
-✅ Best choice: **`getpid`** (syscall number 170 in Linux/RISC-V). PK supports it and returns a dummy PID.
+✅ Best choice: **`getpid`** (syscall number 170 in Linux/RISC-V). PK supports it and returns a dummy PID. 
+
+**[PK's syscall.c](https://github.com/riscv-software-src/riscv-pk/blob/master/pk/syscall.h)**
 
 ---
 
@@ -131,7 +133,7 @@ int main() {
 
 Compile and run:
 ```bash
-riscv64-unknown-linux-gnu-gcc -O2 -DITER=1000 -o enhanced_ctx_switch enhanced_ctx_switch.c
+riscv64-unknown-linux-gnu-gcc -static -O2 -o enhanced_ctx_switch enhanced_ctx_switch.c
 spike pk enhanced_ctx_switch
 ```
 
