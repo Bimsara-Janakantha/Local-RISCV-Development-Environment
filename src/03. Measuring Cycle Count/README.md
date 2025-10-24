@@ -85,7 +85,7 @@ int main() {
 ### 4. **Compile and Run**
 
 ```bash
-riscv64-unknown-linux-gnu-gcc -O2 -o ctx_switch ctx_switch.c
+riscv64-unknown-linux-gnu-gcc -static -O2 -o ctx_switch ctx_switch.c
 spike pk ctx_switch
 ```
 
@@ -106,7 +106,7 @@ To reduce noise:
 - **Use `-O2`** to minimize loop overhead.
 - **Avoid printf inside measurement** (we already do this).
 
-Enhanced version (1000 iterations): `ctx_switch_enhanced.c`
+Enhanced version (1000 iterations): `enhanced_ctx_switch.c`
 
 ```c
 #define ITER 1000
@@ -131,8 +131,8 @@ int main() {
 
 Compile and run:
 ```bash
-riscv64-unknown-linux-gnu-gcc -O2 -DITER=1000 -o ctx_switch_enhanced ctx_switch_enhanced.c
-spike pk ctx_switch_enhanced
+riscv64-unknown-linux-gnu-gcc -O2 -DITER=1000 -o enhanced_ctx_switch enhanced_ctx_switch.c
+spike pk enhanced_ctx_switch
 ```
 
 Typical result: **~2000–3000 cycles per round-trip** in Spike.
@@ -160,7 +160,7 @@ When we call `my_getpid()`:
 
 ### ✅ Your Task
 
-1. **Implement `ctx_switch.c` / `ctx_switch_enhanced.c`** (with loop).
+1. **Implement `ctx_switch.c` / `enhanced_ctx_switch.c`** (with loop).
 2. **Run it in Spike** and record the average cycle count.
 3. **Try different syscalls** (`write`, `gettime`)—do they cost more?
 4. **Answer**: Is the overhead dominated by register save/restore or syscall logic?
