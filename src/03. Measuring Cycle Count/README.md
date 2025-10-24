@@ -32,7 +32,7 @@ Use `rdcycle` **before and after** an `ecall` to capture total overhead.
 
 But note: **We can’t put `rdcycle` *after* `ecall` if `ecall` terminates the program** (like `exit`). So use a **non-terminating syscall**.
 
-✅ Best choice: **`getpid`** (syscall number 170 in Linux/RISC-V). PK supports it and returns a dummy PID. 
+✅ Best choice: **`getpid`** (syscall number 172 in Linux/RISC-V). PK supports it and returns a dummy PID. 
 
 Find all supported syscalls for PK from here: **[syscall.c](https://github.com/riscv-software-src/riscv-pk/blob/master/pk/syscall.h)**
 
@@ -54,7 +54,7 @@ static inline uint64_t rdcycle() {
 
 // Make a getpid syscall (non-exiting)
 long my_getpid() {
-    register long a7 asm("a7") = 170;  // SYS_getpid
+    register long a7 asm("a7") = 172;  // SYS_getpid
     register long a0 asm("a0");
     asm volatile ("ecall"
                   : "=r"(a0)
@@ -166,8 +166,3 @@ When we call `my_getpid()`:
 2. **Run it in Spike** and record the average cycle count.
 3. **Try different syscalls** (`write`, `gettime`)—do they cost more?
 4. **Answer**: Is the overhead dominated by register save/restore or syscall logic?
-
-Once you have numbers, we can discuss:
-- How this compares to real hardware
-- How to reduce overhead (e.g., register windows, lazy FPU)
-- Or move to **modifying register files** (your next topic)
