@@ -101,7 +101,7 @@ In the debugger:
 ```
 : until pc 0 0x00010xxx   # get close to ecall
 : r                       # view registers
-: until inst 0 ecall      # run until ecall instruction
+: until insn 0 ecall      # run until ecall instruction
 ```
 
 After `ecall`:
@@ -143,7 +143,7 @@ You can **disable interrupts** in your user code (but it won’t matter—PK con
 
 To see timer interrupts:
 ```bash
-spike --isa=rv64gc --pc=0x10000 --log-commits pk ecall_test | grep trap
+spike --isa=rv64gc --pc=0x10000 --log-commits pk ecall_exit | grep trap
 ```
 You’ll see periodic `trap` entries with `mcause = 0x8000000000000007` (machine timer interrupt).
 
