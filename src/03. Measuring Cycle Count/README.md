@@ -34,7 +34,7 @@ But note: **We can’t put `rdcycle` *after* `ecall` if `ecall` terminates the p
 
 ✅ Best choice: **`getpid`** (syscall number 170 in Linux/RISC-V). PK supports it and returns a dummy PID. 
 
-**[PK's syscall.c](https://github.com/riscv-software-src/riscv-pk/blob/master/pk/syscall.h)**
+Find all supported syscalls for PK from here: **[syscall.c](https://github.com/riscv-software-src/riscv-pk/blob/master/pk/syscall.h)**
 
 ---
 
