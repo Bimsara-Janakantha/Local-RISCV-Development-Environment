@@ -1,15 +1,14 @@
-# trap_handler.S
 .section .text
 .global trap_handler
 .global _start
 
 trap_handler:
     # Save registers (minimal: just ra and a0-a2 if needed)
-    addi sp, sp, -32
-    sd ra, 0(sp)
-    sd a0, 8(sp)
-    sd a1, 16(sp)
-    sd a2, 24(sp)
+    addi sp, sp, -32 # Stack free for 4 words
+    sd ra, 0(sp)     # Save ra to the stack
+    sd a0, 8(sp)     # Save a0 to the stack
+    sd a1, 16(sp)    # Save a1 to the stack
+    sd a2, 24(sp)    # Save a2 to the stack
 
     # Read mcause to decide action
     csrr a0, mcause
