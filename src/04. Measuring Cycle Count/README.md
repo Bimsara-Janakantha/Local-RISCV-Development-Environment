@@ -179,22 +179,28 @@ This isolates the pure register save/restore cost.
 ### 2. ctx_switch_bare.S
 ```assembly
 # ctx_switch_bare.S
-# void switch_context(uint64_t *save_area, uint64_t *restore_area);
-# Saves x1-x31 (except x0) to save_area, loads from restore_area
+# Bare-metal RISC-V (RV64) context switch benchmark
+# Measures pure register save/restore cost
 
+.section .text
+.globl _start
 .globl switch_context
-.text
+
+# -------------------------------------------------
+# void switch_context(uint64_t *save_area, uint64_t *restore_area);
+# a0 = save_area, a1 = restore_area
+# -------------------------------------------------
 switch_context:
-    # Save all callee-saved + caller-saved (simulate full context)
-    sd x1, 0*8(a0)
-    sd x2, 1*8(a0)
-    sd x3, 2*8(a0)
-    sd x4, 3*8(a0)
-    sd x5, 4*8(a0)
-    sd x6, 5*8(a0)
-    sd x7, 6*8(a0)
-    sd x8, 7*8(a0)
-    sd x9, 8*8(a0)
+    # Save x1–x31 (x0 is hardwired zero, skip)
+    sd x1,  0*8(a0)
+    sd x2,  1*8(a0)
+    sd x3,  2*8(a0)
+    sd x4,  3*8(a0)
+    sd x5,  4*8(a0)
+    sd x6,  5*8(a0)
+    sd x7,  6*8(a0)
+    sd x8,  7*8(a0)
+    sd x9,  8*8(a0)
     sd x10, 9*8(a0)
     sd x11, 10*8(a0)
     sd x12, 11*8(a0)
@@ -218,16 +224,16 @@ switch_context:
     sd x30, 29*8(a0)
     sd x31, 30*8(a0)
 
-    # Restore
-    ld x1, 0*8(a1)
-    ld x2, 1*8(a1)
-    ld x3, 2*8(a1)
-    ld x4, 3*8(a1)
-    ld x5, 4*8(a1)
-    ld x6, 5*8(a1)
-    ld x7, 6*8(a1)
-    ld x8, 7*8(a1)
-    ld x9, 8*8(a1)
+    # Restore x1–x31 from restore_area
+    ld x1,  0*8(a1)
+    ld x2,  1*8(a1)
+    ld x3,  2*8(a1)
+    ld x4,  3*8(a1)
+    ld x5,  4*8(a1)
+    ld x6,  5*8(a1)
+    ld x7,  6*8(a1)
+    ld x8,  7*8(a1)
+    ld x9,  8*8(a1)
     ld x10, 9*8(a1)
     ld x11, 10*8(a1)
     ld x12, 11*8(a1)
@@ -253,10 +259,25 @@ switch_context:
 
     ret
 
+# -------------------------------------------------
+# _start: entry point for bare-metal
+# -------------------------------------------------
+_start:
+    # Set stack pointer to top of RAM (Spike: 128 MiB @ 0x80000000 → top = 0x88000000)
+    li sp, 0x88000000
+
+    # Call C main
+    call main
+
+    # Halt forever
+1:  wfi
+    j 1b
+
 ```
 
 > ⚠️ This saves 31 registers (`x1–x31`). In practice, only callee-saved (`x8–x15`, `x28–x31`) need saving in many ABIs—but for full context switch, we save all. 
 
+> ⚠️ Warnning: If the memory has meaningful data the program works well. If memory's resoration location contains garbage values, program will crash due to incomplete instructions (meaningless data). 
 ---
 
 #### 3. main_bare.c
@@ -264,11 +285,10 @@ switch_context:
 ```c
 #include <stdint.h>
 
-void switch_context(uint64_t *save, uint64_t *restore);
+void switch_context(uint64_t *start, uint64_t *end);
 
-// Dummy task contexts
-uint64_t ctx1[31] __attribute__((aligned(16))) = {0};
-uint64_t ctx2[31] __attribute__((aligned(16))) = {0};
+// Define dummy task contexts
+uint64_t ctx[31] __attribute__((aligned(16))) = {0};
 
 static inline uint64_t rdcycle() {
     uint64_t c;
@@ -276,17 +296,18 @@ static inline uint64_t rdcycle() {
     return c;
 }
 
-void _start() {
+void main() {
     uint64_t start, end;
 
     // Initialize dummy registers
-    ctx1[10] = 0x1234;  // x11
-    ctx2[10] = 0x5678;
+    ctx[10] = 0x80000100;  // x11 (a0)
 
     start = rdcycle();
-    switch_context(ctx1, ctx2);  // switch to ctx2
-    switch_context(ctx2, ctx1);  // switch back
+    switch_context(ctx, ctx);  // save to memory and restore back from memory
     end = rdcycle();
+
+    // Note: If we switch to another location, the system will crash because 
+    // no program is saved in memory. The memory initially contains garbage values.
 
     // Output result via memory (no printf in bare-metal)
     // For Spike, we can inspect via debugger or write to known addr
@@ -299,7 +320,48 @@ void _start() {
 
 ---
 
-### 4. Build & Run (reuse linker script from Step 5)
+### 4. link.ld
+
+```ld
+ENTRY(_start)
+SECTIONS
+{
+    . = 0x80000000;
+    .text : { *(.text) }
+    .data : { *(.data) }
+    .bss : { *(.bss) }
+}
+```
+
+---
+
+### 5. Makefile
+
+```make
+TARGET = ctx_bare
+CC = riscv64-unknown-linux-gnu-gcc
+
+CFLAGS = -mcmodel=medany -ffreestanding -nostdlib -O2 -march=rv64imafd -mabi=lp64d
+LDFLAGS = -T link.ld -nostdlib
+
+# Only .c and .s files as sources; link.ld is only for -T
+SRCS = ctx_switch_bare.s main_bare.c
+
+# Compile
+$(TARGET).elf: $(SRCS) link.ld
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRCS)
+
+# Run in debug mode
+run: $(TARGET).elf
+	spike -d $<
+
+clean:
+	rm -f $(TARGET).elf
+```
+
+---
+
+### 6. Build & Run (reuse linker script from Step 5)
 ```bash
 riscv64-unknown-linux-gnu-gcc -ffreestanding -nostdlib -O2 -o ctx_bare.elf ctx_switch_bare.s main_bare.c link.ld
 
@@ -310,11 +372,18 @@ To read the result:
 
 ```bash
 spike -d ctx_bare.elf
-(spike) until pc 0 0x80000xxx  # near end
+(spike) until pc 0 0x80000xxx  # near end (optional)
+(spike) r 1                    # goto next step
 (spike) mem 0x80001000         # read cycle count
 ```
 
 > ✅ Expect ~200–400 cycles for a full register save/restore (much cheaper than a full trap!).
+
+📌Note: If a warnnig popup saying `warning: ctx_bare.elf has a LOAD segment with RWX permissions` neglect it. because we’re running on Spike (a simulator), not real hardware with memory protection. There’s:
+- No MMU
+- No security concerns
+- No performance penalty
+This warning is just informational.
 
 ---
 
