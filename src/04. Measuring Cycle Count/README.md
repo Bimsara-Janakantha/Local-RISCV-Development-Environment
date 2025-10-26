@@ -396,6 +396,3 @@ This warning is purely informational.
 | **Manual register switch** | 200–400 | Only load/store of 31 registers |
 
 > 🔍 Real insight: The trap mechanism itself (not just register save) dominates context-switch cost in simple systems. 
-
-This explains why register file partitioning (your research focus) can help: if you reduce the number of registers to save, you reduce both manual switch cost and trap handler cost.
-
