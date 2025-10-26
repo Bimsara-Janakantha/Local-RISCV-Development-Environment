@@ -103,7 +103,9 @@ _start:
     # Halt
 1:  wfi
     j 1b
+
 ```
+> ⚠️ Warning: Add newline at the end of the `trap_handler.s` file. Otherwise the make file reports a warning when compile time.
 
 ---
 
@@ -159,8 +161,11 @@ OBJCOPY = riscv64-unknown-linux-gnu-objcopy
 CFLAGS = -mcmodel=medany -ffreestanding -nostdlib -O2
 LDFLAGS = -T link.ld -nostdlib
 
-$(TARGET).elf: trap_handler.S main.c link.ld
-	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $^
+# Only .c and .S/.s files as sources; link.ld is only for -T
+SRCS = trap_handler.s main.c
+
+$(TARGET).elf: $(SRCS) link.ld
+	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRCS)
 
 run: $(TARGET).elf
 	spike $<
@@ -168,6 +173,8 @@ run: $(TARGET).elf
 clean:
 	rm -f $(TARGET).elf
 ```
+
+> ⚠️ Warning: Don’t list `link.ld` as a source file in the dependency list for the `.elf` target. Do not use `$^` in the `$(TARGET).elf: trap_handler.s main.c link.ld` line. `link.ld` is only for `-T`. 
 
 > 🔸 We use `riscv64-unknown-linux-gnu-gcc` even for bare-metal—it works fine as long as we avoid OS assumptions (`-ffreestanding -nostdlib`).
 
@@ -179,6 +186,10 @@ clean:
 make
 make run
 ```
+
+> ℹ️ This will create a `bare_trap.elf` file after the `make` command successfully completes.
+
+> ℹ️ If any case we can clear the files after the `make` command by typing `make clear` command in the terminal.
 
 ✅ If our trap handler works, the program will:
 - Set `mtvec` to `trap_handler`

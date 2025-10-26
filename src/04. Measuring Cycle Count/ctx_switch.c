@@ -4,6 +4,9 @@
     Last Update: 24 Oct 2025   
     
     Note: This program should return the cycle count spent for the getpid.
+          If the program gets negative values as the PID, that means
+          there is a problem in the program. Most probably there is a issue 
+          with the syscall.
 */
 
 #include <stdio.h>
