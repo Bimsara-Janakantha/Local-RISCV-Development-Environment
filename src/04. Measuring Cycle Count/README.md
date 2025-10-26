@@ -9,7 +9,7 @@ This round-trip **approximates the minimal context switch cost** in a system wit
 
 ---
 
-## 📏 Step-by-Step: Measure Trap/Return Overhead
+## 📏 Part 1: Measure PK-Based Context Switch Overhead
 
 ### 1. **What Are We Measuring?**
 
@@ -160,9 +160,172 @@ When we call `my_getpid()`:
 
 ---
 
-### ✅ Your Task
+## 📏 Part 2: Measure Bare-Metal Manual Context Switch (Simulated)
 
-1. **Implement `ctx_switch.c` / `enhanced_ctx_switch.c`** (with loop).
-2. **Run it in Spike** and record the average cycle count.
-3. **Try different syscalls** (`write`, `gettime`)—do they cost more?
-4. **Answer**: Is the overhead dominated by register save/restore or syscall logic?
+Now, let’s simulate a register-based context switch like FreeRTOS would do—without traps, just saving/restoring registers.
+
+This isolates the pure register save/restore cost.
+
+### 1. Approach
+
+- Define two “tasks” with their own register states.
+- Use a switch_context function that:
+- Saves caller’s registers to a stack or struct.
+- Restores callee’s registers.
+- Measure cycles for this switch.
+
+---
+
+### 2. ctx_switch_bare.S
+```assembly
+# ctx_switch_bare.S
+# void switch_context(uint64_t *save_area, uint64_t *restore_area);
+# Saves x1-x31 (except x0) to save_area, loads from restore_area
+
+.globl switch_context
+.text
+switch_context:
+    # Save all callee-saved + caller-saved (simulate full context)
+    sd x1, 0*8(a0)
+    sd x2, 1*8(a0)
+    sd x3, 2*8(a0)
+    sd x4, 3*8(a0)
+    sd x5, 4*8(a0)
+    sd x6, 5*8(a0)
+    sd x7, 6*8(a0)
+    sd x8, 7*8(a0)
+    sd x9, 8*8(a0)
+    sd x10, 9*8(a0)
+    sd x11, 10*8(a0)
+    sd x12, 11*8(a0)
+    sd x13, 12*8(a0)
+    sd x14, 13*8(a0)
+    sd x15, 14*8(a0)
+    sd x16, 15*8(a0)
+    sd x17, 16*8(a0)
+    sd x18, 17*8(a0)
+    sd x19, 18*8(a0)
+    sd x20, 19*8(a0)
+    sd x21, 20*8(a0)
+    sd x22, 21*8(a0)
+    sd x23, 22*8(a0)
+    sd x24, 23*8(a0)
+    sd x25, 24*8(a0)
+    sd x26, 25*8(a0)
+    sd x27, 26*8(a0)
+    sd x28, 27*8(a0)
+    sd x29, 28*8(a0)
+    sd x30, 29*8(a0)
+    sd x31, 30*8(a0)
+
+    # Restore
+    ld x1, 0*8(a1)
+    ld x2, 1*8(a1)
+    ld x3, 2*8(a1)
+    ld x4, 3*8(a1)
+    ld x5, 4*8(a1)
+    ld x6, 5*8(a1)
+    ld x7, 6*8(a1)
+    ld x8, 7*8(a1)
+    ld x9, 8*8(a1)
+    ld x10, 9*8(a1)
+    ld x11, 10*8(a1)
+    ld x12, 11*8(a1)
+    ld x13, 12*8(a1)
+    ld x14, 13*8(a1)
+    ld x15, 14*8(a1)
+    ld x16, 15*8(a1)
+    ld x17, 16*8(a1)
+    ld x18, 17*8(a1)
+    ld x19, 18*8(a1)
+    ld x20, 19*8(a1)
+    ld x21, 20*8(a1)
+    ld x22, 21*8(a1)
+    ld x23, 22*8(a1)
+    ld x24, 23*8(a1)
+    ld x25, 24*8(a1)
+    ld x26, 25*8(a1)
+    ld x27, 26*8(a1)
+    ld x28, 27*8(a1)
+    ld x29, 28*8(a1)
+    ld x30, 29*8(a1)
+    ld x31, 30*8(a1)
+
+    ret
+
+```
+
+> ⚠️ This saves 31 registers (`x1–x31`). In practice, only callee-saved (`x8–x15`, `x28–x31`) need saving in many ABIs—but for full context switch, we save all. 
+
+---
+
+#### 3. main_bare.c
+
+```c
+#include <stdint.h>
+
+void switch_context(uint64_t *save, uint64_t *restore);
+
+// Dummy task contexts
+uint64_t ctx1[31] __attribute__((aligned(16))) = {0};
+uint64_t ctx2[31] __attribute__((aligned(16))) = {0};
+
+static inline uint64_t rdcycle() {
+    uint64_t c;
+    asm volatile ("rdcycle %0" : "=r" (c));
+    return c;
+}
+
+void _start() {
+    uint64_t start, end;
+
+    // Initialize dummy registers
+    ctx1[10] = 0x1234;  // x11
+    ctx2[10] = 0x5678;
+
+    start = rdcycle();
+    switch_context(ctx1, ctx2);  // switch to ctx2
+    switch_context(ctx2, ctx1);  // switch back
+    end = rdcycle();
+
+    // Output result via memory (no printf in bare-metal)
+    // For Spike, we can inspect via debugger or write to known addr
+    *(volatile uint64_t*)0x80001000 = end - start;
+
+    // Halt
+    while(1);
+}
+``` 
+
+---
+
+### 4. Build & Run (reuse linker script from Step 5)
+```bash
+riscv64-unknown-linux-gnu-gcc -ffreestanding -nostdlib -O2 -o ctx_bare.elf ctx_switch_bare.S main_bare.c link.ld
+
+spike ctx_bare.elf
+```
+
+To read the result:
+
+```bash
+spike -d ctx_bare.elf
+(spike) until pc 0 0x80000xxx  # near end
+(spike) mem 0x80001000         # read cycle count
+```
+
+> ✅ Expect ~200–400 cycles for a full register save/restore (much cheaper than a full trap!).
+
+---
+
+## 📊 Interpretation
+
+| Method | Cycles (approx, Spike) | What It Includes |
+|-------|------------------------|------------------|
+| **PK `ecall` round-trip** | 1300–1600 | Trap entry, PK handler, `mret`, CSR manipulation |
+| **Manual register switch** | 200–400 | Only load/store of 31 registers |
+
+> 🔍 Real insight: The trap mechanism itself (not just register save) dominates context-switch cost in simple systems. 
+
+This explains why register file partitioning (your research focus) can help: if you reduce the number of registers to save, you reduce both manual switch cost and trap handler cost.
+
