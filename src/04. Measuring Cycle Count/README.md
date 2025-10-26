@@ -170,9 +170,9 @@ This isolates the pure register save/restore cost.
 
 - Define two “tasks” with their own register states.
 - Use a switch_context function that:
-- Saves caller’s registers to a stack or struct.
-- Restores callee’s registers.
-- Measure cycles for this switch.
+    - Saves caller’s registers to a stack or struct.
+    - Restores callee’s registers.
+    - Measure cycles for this switch.
 
 ---
 
