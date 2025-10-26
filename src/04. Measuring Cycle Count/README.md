@@ -363,15 +363,14 @@ clean:
 
 ### 6. Build & Run (reuse linker script from Step 5)
 ```bash
-riscv64-unknown-linux-gnu-gcc -ffreestanding -nostdlib -O2 -o ctx_bare.elf ctx_switch_bare.s main_bare.c link.ld
-
-spike ctx_bare.elf
+make clean
+make 
+make run # or spike -d ctx_bare.elf
 ```
 
 To read the result:
 
 ```bash
-spike -d ctx_bare.elf
 (spike) until pc 0 0x80000xxx  # near end (optional)
 (spike) r 1                    # goto next step
 (spike) mem 0x80001000         # read cycle count
