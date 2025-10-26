@@ -27,7 +27,7 @@ void main() {
     ctx1[10] = 0x1234;  // x11
     ctx2[10] = 0x5678;
 
-    start = rdcycle();
+    //start = rdcycle();
     switch_context(ctx1, ctx2);  // switch to ctx2
     //switch_context(ctx2, ctx1);  // switch back
     end = rdcycle();
