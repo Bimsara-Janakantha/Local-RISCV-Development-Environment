@@ -1,18 +1,17 @@
-TARGET = bare_trap
+TARGET = ctx_bare
 CC = riscv64-unknown-linux-gnu-gcc
-OBJCOPY = riscv64-unknown-linux-gnu-objcopy
 
-CFLAGS = -mcmodel=medany -ffreestanding -nostdlib -O2
+CFLAGS = -mcmodel=medany -ffreestanding -nostdlib -O2 -march=rv64imafd -mabi=lp64d
 LDFLAGS = -T link.ld -nostdlib
 
 # Only .c and .S/.s files as sources; link.ld is only for -T
-SRCS = trap_handler.s main.c
+SRCS = ctx_switch_bare.s main_bare.c
 
 $(TARGET).elf: $(SRCS) link.ld
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRCS)
 
 run: $(TARGET).elf
-	spike -d $<
+	spike $<
 
 clean:
 	rm -f $(TARGET).elf

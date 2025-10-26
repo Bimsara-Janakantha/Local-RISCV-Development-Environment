@@ -166,11 +166,13 @@ LDFLAGS = -T link.ld -nostdlib
 # Only .c and .S/.s files as sources; link.ld is only for -T
 SRCS = trap_handler.s main.c
 
+# Compile
 $(TARGET).elf: $(SRCS) link.ld
 	$(CC) $(CFLAGS) $(LDFLAGS) -o $@ $(SRCS)
 
+# Run in debug mode
 run: $(TARGET).elf
-	spike $<
+	spike -d $<
 
 clean:
 	rm -f $(TARGET).elf

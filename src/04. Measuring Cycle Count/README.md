@@ -301,7 +301,7 @@ void _start() {
 
 ### 4. Build & Run (reuse linker script from Step 5)
 ```bash
-riscv64-unknown-linux-gnu-gcc -ffreestanding -nostdlib -O2 -o ctx_bare.elf ctx_switch_bare.S main_bare.c link.ld
+riscv64-unknown-linux-gnu-gcc -ffreestanding -nostdlib -O2 -o ctx_bare.elf ctx_switch_bare.s main_bare.c link.ld
 
 spike ctx_bare.elf
 ```

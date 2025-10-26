@@ -38,7 +38,7 @@ handle_ecall:
 
 _start:
     # Set stack pointer to 16KB above code start (safe in Spike)
-    # Spike gives you ~128MB+ RAM starting at 0x80000000
+    # Spike gives you ~128MB+ RAM starting at 0x80000000 (top = 0x88000000)
     li sp, 0x80010000
 
     # Set mtvec to our handler
