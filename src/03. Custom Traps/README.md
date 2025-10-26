@@ -57,11 +57,11 @@ We’ll create:
 
 trap_handler:
     # Save registers (minimal: just ra and a0-a2 if needed)
-    addi sp, sp, -32
-    sd ra, 0(sp)
-    sd a0, 8(sp)
-    sd a1, 16(sp)
-    sd a2, 24(sp)
+    addi sp, sp, -32 # Stack free for 4 words
+    sd ra, 0(sp)     # Save ra to the stack
+    sd a0, 8(sp)     # Save a0 to the stack
+    sd a1, 16(sp)    # Save a1 to the stack
+    sd a2, 24(sp)    # Save a2 to the stack
 
     # Read mcause to decide action
     csrr a0, mcause
@@ -90,8 +90,9 @@ handle_ecall:
     mret
 
 _start:
-    # Set stack pointer (use top of memory)
-    li sp, 0x80000000
+    # Set stack pointer to 16KB above code start (safe in Spike)
+    # Spike gives you ~128MB+ RAM starting at 0x80000000
+    li sp, 0x80010000
 
     # Set mtvec to our handler
     la t0, trap_handler
@@ -107,6 +108,7 @@ _start:
 ```
 > ⚠️ Warning: Add newline at the end of the `trap_handler.s` file. Otherwise the make file reports a warning when compile time.
 
+> ℹ️ Spike gives you ~128MB+ RAM starting at 0x80000000. So Set stack pointer to 16KB above code start (safe in Spike)
 ---
 
 #### 2. 📄 `main.c`
