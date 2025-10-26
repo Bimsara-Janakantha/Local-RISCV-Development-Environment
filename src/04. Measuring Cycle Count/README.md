@@ -277,7 +277,7 @@ _start:
 
 > ⚠️ This saves 31 registers (`x1–x31`). In practice, only callee-saved (`x8–x15`, `x28–x31`) need saving in many ABIs—but for full context switch, we save all. 
 
-> ⚠️ Warnning: If the memory has meaningful data the program works well. If memory's resoration location contains garbage values, program will crash due to incomplete instructions (meaningless data). 
+> ⚠️ Warning: If the memory contains meaningful data, the program will work correctly. However, if the memory’s restoration location contains garbage values, the program will crash due to incomplete or invalid instructions.
 ---
 
 #### 3. main_bare.c
@@ -379,11 +379,13 @@ spike -d ctx_bare.elf
 
 > ✅ Expect ~200–400 cycles for a full register save/restore (much cheaper than a full trap!).
 
-📌Note: If a warnnig popup saying `warning: ctx_bare.elf has a LOAD segment with RWX permissions` neglect it. because we’re running on Spike (a simulator), not real hardware with memory protection. There’s:
+📌Note: If a warning pops up saying `warning: ctx_bare.elf has a LOAD segment with RWX permissions`, you can safely ignore it. This occurs because we’re running on Spike (a simulator), not on real hardware with memory protection. There is:
+
 - No MMU
-- No security concerns
+- No security concern 
 - No performance penalty
-This warning is just informational.
+
+This warning is purely informational.
 
 ---
 
