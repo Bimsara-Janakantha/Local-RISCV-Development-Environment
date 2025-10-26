@@ -211,8 +211,7 @@ spike -d bare_trap.elf
 
 In debugger:
 ```
-(spike) until pc 0 0x80000020   # near ecall
-(spike) r 1                     # execute ecall → trap! (Or we can just press the Enter key)
+(spike) r 1                     # execute ecall → trap! one-by-one (Or we can just press the Enter key)
 (spike) reg 0 mcause            # should be 11 (0xb) = M-mode ecall
 (spike) reg 0 mepc              # should point to ecall address
 ```
