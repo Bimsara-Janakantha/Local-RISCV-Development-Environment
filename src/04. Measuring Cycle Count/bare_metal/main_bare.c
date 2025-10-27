@@ -1,5 +1,5 @@
 /*
-    Title: Measure Trap/Return Overhead - Enhanced Version
+    Title: Measure Trap/Return Overhead
     Auther: Janakantha S.M.B.G.
     Last Update: 27 Oct 2025   
     

@@ -1,12 +1,24 @@
 # Simulate Context Switching (C and Assembly)
 
-### Note: 
-Since we're using **Spike + PK** with the `riscv64-unknown-linux-gnu-gcc` toolchain, remember that **PK runs our program in user mode (U-mode)**, and we **cannot directly access all CSRs or implement a true kernel-mode context switch**. However, we **can simulate a context switch in user space** by:
+### 🧠 Key Concepts
 
-- Manually saving/restoring general-purpose registers (and possibly `pc` via a trampoline).
-- Using C + inline assembly to mimic cooperative multitasking between two "tasks".
+In RISC-V (RV64G), the user-level register file has 32 × 64-bit registers:
+- x0 = zero (hardwired)
+- x1 = return address (ra)
+- x2 = stack pointer (sp)
+- x8–x9, x18–x27 = callee-saved (s0–s11)
+- Others are caller-saved or temporaries.
 
-This is sufficient for **measuring approximate context-switch overhead** in cycles.
+For a minimal context switch, we must save/restore:
+- Callee-saved registers (s0–s11, i.e., x8–x9, x18–x27) — 12 registers
+- Stack pointer (sp, x2) — if tasks have separate stacks
+- Return address (ra, x1) — if switching from a function call
+- Program counter — simulated via a saved label or function pointer
+
+But for simplicity in a cooperative switch, we can:
+- Use separate stacks for each task.
+- Save/restore only the callee-saved registers + ra + sp.
+- Use a global context struct per task.
 
 ---
 
