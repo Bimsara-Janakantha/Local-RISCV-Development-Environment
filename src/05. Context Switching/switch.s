@@ -1,7 +1,6 @@
 .text
 .globl save_context
 .globl restore_context
-.globl init_context
 
 # void save_context(context_t *ctx);
 save_context:
@@ -36,5 +35,4 @@ restore_context:
     ld s10, 10*8(a0)
     ld s11, 11*8(a0)
     ld sp, 12*8(a0)
-    ld ra, 13*8(a0)
     ret
