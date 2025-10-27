@@ -17,7 +17,6 @@ save_context:
     sd s10, 10*8(a0)
     sd s11, 11*8(a0)
     sd sp, 12*8(a0)
-    # sd ra, 13*8(a0)
     ret
 
 # void restore_context(context_t *ctx);
