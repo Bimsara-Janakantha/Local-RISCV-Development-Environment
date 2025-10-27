@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdint.h>
+#include <stdlib.h>
 #include "context.h" 
 
 // ---------- Context definition ----------
@@ -13,6 +14,8 @@ static long stack2[STACK_SIZE / sizeof(long)];
 
 static context_t ctx1, ctx2;
 static int current_task = 1;  // 1 -> task1, 2 -> task2
+volatile long i = 0, j = 0;
+static int task1_done = 0, task2_done = 0;
 
 // ---------- Function declarations ----------
 extern void save_context(context_t *ctx);
@@ -25,7 +28,6 @@ void task_trampoline(void);
 
 // ---------- Task implementations ----------
 void task1_func(void) {
-    volatile long i = 0;
     while (i < WORK_LIMIT*REPEATED_WORK) {
         i++;
         printf("Task 1 \t Work: %ld\n", i);
@@ -34,11 +36,13 @@ void task1_func(void) {
             yield();
         }
     }
+    printf("Task 1 complete!\n\n");
+    task1_done = 1;
+    yield();
 }
 
 void task2_func(void) {
-    volatile long j = 0;
-    while (j < WORK_LIMIT*REPEATED_WORK) {
+    while (j < WORK_LIMIT*(REPEATED_WORK+2)) {
         j++;
         printf("Task 2 \t Work: %ld\n", j);
         if (j % WORK_LIMIT == 0) {
@@ -46,13 +50,21 @@ void task2_func(void) {
             yield();
         }
     }
+    printf("Task 2 complete!\n\n");
+    task2_done = 1;
+    yield();
 }
 
 // ---------- Yield & context switch ----------
 void yield(void) {
     context_t *old, *new;
 
-    if (current_task == 1) {
+    if(task1_done && task2_done){
+        printf("All tasks completed successfully.\n");
+        printf("Simulation finished.\n");
+        exit(0);
+    }
+    else if (current_task == 1) {
         old = &ctx1;
         new = &ctx2;
         current_task = 2;  // Switch to task 2
@@ -63,24 +75,11 @@ void yield(void) {
     }
     
     printf("oldAddr: 0x%x \t newAddr: 0x%x\n", old, new);
-    printf("Ready to switch\n");
-
-    uint64_t start, end;
-
-    // Count initial cycle
-    asm volatile ("rdcycle %0" : "=r" (start));
+    printf("Context Switching...\n");
 
     // Context switching
-    printf("Saving! \t\t sp=0x%016lx \t ra=0x%016lx\n",old->regs[12], old->regs[13]);
     save_context(old);
-    printf("Current task saved! \t sp=0x%016lx \t ra=0x%016lx\n",old->regs[12], old->regs[13]);
-
-    //restore_context(old);
-    printf("New task loaded!\n");
-
-    // Count final cycle
-    asm volatile ("rdcycle %0" : "=r" (end));
-    printf("Context switch took %lu cycles\n\n", end - start);
+    restore_context(new);
 }
 
 // ---------- Trampoline to enter task ----------
@@ -90,6 +89,7 @@ void task_trampoline(void) {
     } else {
         task2_func();
     }
+    return;
 }
 
 // ---------- Initialize context (set up stack & return address) ----------
@@ -98,8 +98,8 @@ void init_context(context_t *ctx, long *stack_top) {
     for (int i = 0; i < 14; i++) {
         ctx->regs[i] = 0;
     }
-    //ctx->regs[12] = (long)stack_top;          // sp
-    //ctx->regs[13] = (long)&task_trampoline;   // ra — where to return after restore
+    ctx->regs[12] = (long)stack_top;          // sp
+    ctx->regs[13] = (long)&task_trampoline;   // ra — where to return after restore
 
     printf("&task_trampoline=0x%016lx\n", ctx->regs[13]);
 }
@@ -115,7 +115,7 @@ int main() {
 
     // Start task1
     current_task = 1;
-    task1_func();
+    task_trampoline();
 
     return 0;
 }
