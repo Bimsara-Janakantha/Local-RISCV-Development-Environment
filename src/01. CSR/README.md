@@ -2,10 +2,14 @@
 
 ### 📌 What Are CSRs?
 [CSRs (**Control and Status Registers**)](https://docs.openhwgroup.org/projects/cv32e40s-user-manual/en/latest/control_status_registers.html#control-and-status-register-map) are special-purpose registers in RISC-V that control or report the processor state. They are **not part of the general-purpose register file (x0–x31)** and are accessed via special instructions:
-- `csrrw rd, csr, rs1` — CSR read/write -> Read CSR into rd
+- `csrrw rd, csr, rs1` — CSR read/write
 - `csrrs rd, csr, rs1` — CSR read and set bits
 - `csrrc rd, csr, rs1` — CSR read and clear bits
 - Pseudo-instructions like `csrr rd, csr` and `csrw csr, rs1` are commonly used.
+    - `csrr rd, csr` ⟶ Read CSR into rd
+    - `csrw csr, rs` ⟶ Write rs into CSR
+    - `csrs csr, rs` ⟶ Set bits in CSR (logical OR)
+    - `csrc csr, rs` ⟶ Clear bits in CSR (logical AND NOT)
 
 CSRs are **privilege-level sensitive**:  
 - **User mode (U)**: Very limited CSR access (e.g., `cycle`, `time` if delegated).
@@ -16,7 +20,7 @@ CSRs are **privilege-level sensitive**:
 
 ---
 
-### ✅ Key CSRs You Should Know
+### ✅ Key CSRs 
 
 | CSR | Address | Mode | Purpose |
 |-----|---------|------|--------|
@@ -43,20 +47,31 @@ Create a file `csr_cycle.c`:
 #include <stdio.h>
 #include <stdint.h>
 
-static inline uint64_t rdcycle() {
-    uint64_t result;
-    asm volatile ("rdcycle %0" : "=r" (result));
-    return result;
+static inline uint64_t rdcycle(){
+    uint64_t cycleCount;
+    asm volatile ("rdcycle %0" : "=r" (cycleCount));
+    return cycleCount;
 }
 
-int main() {
-    uint64_t c1 = rdcycle();
+int main(){
+    // Check start cpu cycle count
+    uint64_t startCount = rdcycle();
+
     // Do some work
-    for (volatile int i = 0; i < 1000; i++);
-    uint64_t c2 = rdcycle();
-    printf("Start cycle: %lu\n", c1);
-    printf("End cycle:   %lu\n", c2);
-    printf("Elapsed:     %lu cycles\n", c2 - c1);
+    for (volatile int i=0; i<1000; i++);
+
+    // Check end cpu cycle count
+    uint64_t endCount = rdcycle();
+
+    // Cycle count for the work
+    uint64_t workCount = endCount - startCount;
+
+    // Print Results
+    printf("Start Cycle: %lu\n", startCount);
+    printf("End Cycle: %lu\n", endCount);
+    printf("Elapsed: %lu\n", workCount);
+
+    // Terminate Program
     return 0;
 }
 ```
