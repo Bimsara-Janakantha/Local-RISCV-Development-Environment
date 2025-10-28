@@ -269,12 +269,3 @@ spike kernel
 3. Implement **cooperative switch via `ecall`**.
 4. Add **cycle counting**.
 5. Experiment with **saving fewer registers** (partitioning).
-
----
-
-Would you like:
-- A complete minimal bare-metal context switch example?
-- Help setting up the toolchain and linker script?
-- Guidance on measuring cycles accurately in M-mode?
-
-Let me know — I’ll provide the exact files and commands!
