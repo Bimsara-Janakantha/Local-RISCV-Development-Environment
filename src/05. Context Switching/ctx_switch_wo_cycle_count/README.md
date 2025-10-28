@@ -35,7 +35,7 @@ But for simplicity in a cooperative switch, we can:
 We’ll save the **callee-saved registers** (which a real OS would preserve across context switches). On RISC-V RV64G, these are:
 - `s0–s11` (i.e., `x8–x9`, `x18–x27`)
 - `sp` (stack pointer)
-- `ra` (return address)
+- `ra` (return address) 
 
 ```c
 // context.h
@@ -124,93 +124,144 @@ This avoids complex PC handling and works in user mode.
 
 ### 📄 Full Working Example
 
-#### `context_switch_demo.c`
+#### `main.c`
 
 ```c
 #include <stdio.h>
 #include <stdint.h>
-#include "context.h"
+#include <stdlib.h>
+#include "context.h" 
 
-// Assembly function
+// ---------- Context definition ----------
+#define STACK_SIZE 2048
+#define WORK_LIMIT 10
+#define REPEATED_WORK 5
+
+// ---------- Global task state ----------
+static long stack1[STACK_SIZE / sizeof(long)];
+static long stack2[STACK_SIZE / sizeof(long)];
+
+static context_t ctx1, ctx2;
+static int current_task = 1;  // 1 -> task1, 2 -> task2
+static int task1_done = 0, task2_done = 0;
+uint64_t start, end;
+
+// Global Register - That saves the current status of the counter. 
+// Here we use the same address for both tasks, then it should be toggle between two tasks.
+register long i asm("s1");
+
+// ---------- Function declarations ----------
 extern void save_context(context_t *ctx);
 extern void restore_context(context_t *ctx);
 
-// Two task stacks (2KB each)
-#define STACK_SIZE 2048
-static long stack1[STACK_SIZE/sizeof(long)];
-static long stack2[STACK_SIZE/sizeof(long)];
+void task1_func(void);
+void task2_func(void);
+void yield(void);
+void task_trampoline(void);
 
-static context_t ctx1, ctx2;
-static int current_task = 1;
-
-// Dummy tasks
+// ---------- Task implementations ----------
 void task1_func(void) {
-    volatile int i = 0;
-    while (1) {
+    while (i < WORK_LIMIT*REPEATED_WORK) {
         i++;
-        if (i % 1000000 == 0) {
-            printf("Task1: %d\n", i);
-            yield(); // cooperative yield
-        }
-    }
-}
-
-void task2_func(void) {
-    volatile int j = 0;
-    while (1) {
-        j++;
-        if (j % 1000000 == 0) {
-            printf("Task2: %d\n", j);
+        printf("Task 1 \t Work: %ld\n", i);
+        if (i % WORK_LIMIT == 0) {
+            printf("Task1: %ld\n\n", i);
             yield();
         }
     }
+    printf("Task 1 complete!\n\n");
+    task1_done = 1;
+    yield();
 }
 
-// Yield function
+void task2_func(void) {
+    while (i < WORK_LIMIT*(REPEATED_WORK+2)) {
+        i++;
+        printf("Task 2 \t Work: %ld\n", i);
+        if (i % WORK_LIMIT == 0) {
+            printf("Task2: %ld\n\n", i);
+            yield();
+        }
+    }
+    printf("Task 2 complete!\n\n");
+    task2_done = 1;
+    yield();
+}
+
+// ---------- Yield & context switch ----------
 void yield(void) {
     context_t *old, *new;
-    if (current_task == 1) {
+
+    if(task1_done && task2_done){
+        printf("All tasks completed successfully.\n");
+        printf("Simulation finished.\n");
+        
+        asm volatile ("rdcycle %0" : "=r" (end));
+        printf("Context switch took %lu cycles\n\n", end - start);
+        exit(0);
+    }
+    else if (current_task == 1) {
         old = &ctx1;
         new = &ctx2;
-        current_task = 2;
+        current_task = 2;  // Switch to task 2
     } else {
         old = &ctx2;
         new = &ctx1;
-        current_task = 1;
+        current_task = 1;  // Switch to task 1
     }
+    
+    printf("oldAddr: 0x%x \t newAddr: 0x%x\n", old, new);
+    printf("Context Switching...\n");
 
-    uint64_t start, end;
-    asm volatile ("rdcycle %0" : "=r" (start));
+    // Context switching
     save_context(old);
     restore_context(new);
-    asm volatile ("rdcycle %0" : "=r" (end));
-
-    // Print only once to avoid noise
-    static int first = 1;
-    if (first) {
-        printf("Context switch took %lu cycles\n", end - start);
-        first = 0;
-    }
 }
 
-// Assembly helpers (in switch.S)
-void init_context(context_t *ctx, void (*func)(void), long *stack_top) {
-    // Set up initial context to start at func
-    ctx->regs[12] = (long)stack_top;          // sp
-    ctx->regs[13] = (long)&task_trampoline;   // ra (return to trampoline)
-    ctx->pc = func;
-}
-
-// Trampoline to call the actual task
+// ---------- Trampoline to enter task ----------
 void task_trampoline(void) {
-    // When restore_context returns, we land here
     if (current_task == 1) {
         task1_func();
     } else {
         task2_func();
     }
 }
+
+// ---------- Initialize context (set up stack & return address) ----------
+void init_context(context_t *ctx, long *stack_top) {
+    // Initialize all saved registers to 0 (optional)
+    for (int i = 0; i < 14; i++) {
+        ctx->regs[i] = 0;
+    }
+    ctx->regs[12] = (long)stack_top;          // sp
+    ctx->regs[13] = (long)&task_trampoline;   // ra — where to return after restore
+
+    printf("&task_trampoline=0x%016lx\n", ctx->regs[13]);
+}
+
+// ---------- Main ----------
+int main() {
+    // Set up stacks (point to top)
+    long *sp1 = &stack1[STACK_SIZE / sizeof(long) - 1];
+    long *sp2 = &stack2[STACK_SIZE / sizeof(long) - 1];
+
+    init_context(&ctx1, sp1);
+    init_context(&ctx2, sp2);
+
+    // Start task1
+    current_task = 1;
+
+    // Run context switch
+    asm volatile ("rdcycle %0" : "=r" (start));
+    restore_context(&ctx1);
+
+    return 0;
+}
+
 ```
+
+> ⚠️ Note: This is a **simplified simulation**. In real OS, you’d use `mret`/`sret` and trap handlers. But under PK, this user-space cooperative switch is valid for **measuring overhead**.
+
 
 #### `switch.S`
 
@@ -218,7 +269,6 @@ void task_trampoline(void) {
 .text
 .globl save_context
 .globl restore_context
-.globl init_context
 
 # void save_context(context_t *ctx);
 save_context:
@@ -235,7 +285,6 @@ save_context:
     sd s10, 10*8(a0)
     sd s11, 11*8(a0)
     sd sp, 12*8(a0)
-    sd ra, 13*8(a0)
     ret
 
 # void restore_context(context_t *ctx);
@@ -255,40 +304,18 @@ restore_context:
     ld sp, 12*8(a0)
     ld ra, 13*8(a0)
     ret
+
 ```
+> `ra` is not saved in this section. 
 
-#### `main.c`
-
-```c
-#include "context.h"
-
-extern void init_context(context_t *ctx, void (*func)(void), long *stack_top);
-extern void task_trampoline(void);
-extern void task1_func(void), task2_func(void);
-
-int current_task = 1;
-
-int main() {
-    // Initialize contexts
-    init_context(&ctx1, task1_func, &stack1[STACK_SIZE/sizeof(long) - 10]);
-    init_context(&ctx2, task2_func, &stack2[STACK_SIZE/sizeof(long) - 10]);
-
-    // Start with task1
-    restore_context(&ctx1);
-    task_trampoline(); // should not return
-
-    return 0;
-}
-```
-
-> ⚠️ Note: This is a **simplified simulation**. In real OS, you’d use `mret`/`sret` and trap handlers. But under PK, this user-space cooperative switch is valid for **measuring overhead**.
+⚠️ Warnning: During the memory allocation time, the pointer to the `trampoline()` function was saved to the memory as the return address (`ra`). If we save the `ra` during the each context switching, it overwrites the `trampoline()` function pointer with current executing instruction (current `return address`). Then it cause an **unexpected behaviour or infinite loop**.  So we do not save the `ra`, but we restore the `ra` which pointed to the `trampoline()` function.
 
 ---
 
 ### 🧪 Build & Run
 
 ```bash
-riscv64-unknown-linux-gnu-gcc -o ctx_switch main.c context_switch_demo.c switch.S -static
+riscv64-unknown-linux-gnu-gcc -static -o ctx_switch main.c switch.s
 spike pk ctx_switch
 ```
 
@@ -301,20 +328,6 @@ You should see:
 ---
 
 ### 🔍 What This Measures
-- The cost of **saving 14 registers + restoring 14 registers**.
+- The cost of **saving 14 registers + restoring 14 registers** for complete process.
 - **Does NOT include** trap entry/exit (since we’re in user mode).
 - For **real OS context switch**, you’d add trap handling cost (which you can measure separately via `ecall` + custom handler in M-mode).
-
----
-
-### ✅ Next Steps
-Once this works:
-- Try reducing the number of registers saved (e.g., only `s0–s5`) to simulate **register partitioning** (relevant to your research!).
-- Compare cycle counts for full vs. partial context saves.
-
-Would you like help:
-- Building this code step-by-step?
-- Modifying it to simulate **register file partitioning**?
-- Moving to **bare-metal (no PK)** to handle real traps?
-
-Let me know!
