@@ -95,7 +95,10 @@ void yield(void) {
     asm volatile ("rdcycle %0" : "=r" (start));
     
     save_context(old);
+    printf("Current Saved!\n");
+
     restore_context(new);
+    printf("New Restored!\n");
     
     asm volatile ("rdcycle %0" : "=r" (end));
     printf("Context switch took %lu cycles\n\n", end - start);
