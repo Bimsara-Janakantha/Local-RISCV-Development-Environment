@@ -15,10 +15,7 @@ For a minimal context switch, we must save/restore:
 - Return address (ra, x1) — if switching from a function call
 - Program counter — simulated via a saved label or function pointer
 
-But for simplicity in a cooperative switch, we can:
-- Use separate stacks for each task.
-- Save/restore only the callee-saved registers + ra + sp.
-- Use a global context struct per task.
+But for simplicity in a cooperative switch, we Save/restore only the callee-saved registers + ra + sp.
 
 ---
 
@@ -32,10 +29,7 @@ But for simplicity in a cooperative switch, we can:
 ### 🧱 Step-by-Step Plan
 
 #### 1. Define a Context Structure
-We’ll save the **callee-saved registers** (which a real OS would preserve across context switches). On RISC-V RV64G, these are:
-- `s0–s11` (i.e., `x8–x9`, `x18–x27`)
-- `sp` (stack pointer)
-- `ra` (return address) 
+We’ll save the **callee-saved registers** (which a real OS would preserve across context switches). On RISC-V RV64G, `s0–s11` (i.e., `x8–x9`, `x18–x27`)
 
 ```c
 // context.h
@@ -43,30 +37,29 @@ We’ll save the **callee-saved registers** (which a real OS would preserve acro
 #define CONTEXT_H
 
 typedef struct {
-    long regs[14];  // s0-s11 (12 regs) + sp + ra
+    long regs[11];  // s1-s11 (11 regs)
 } context_t;
 
 #endif
 ```
 
-> Note: We use `long` because RISC-V is 64-bit in this toolchain.
+> Note: We use `long` because RISC-V is 64-bit in this toolchain. Here we don't preserve the `s0, ra, sp`. Because after the restoration we plan to jump back to the paused location of the current program, since we need to measure the context. If we change them program will crashed.  
 
 ---
 
 #### 2. Write the Context Switch Routine in Assembly
 
-Create `switch.S`:
+✅ This is a simpler & Practical Approach: Cooperative Yield with Register Save/Restore
+
+`switch.s`
 
 ```assembly
-# switch.S
 .text
-.globl context_switch
-.type context_switch, @function
+.globl save_context
+.globl restore_context
 
-# void context_switch(context_t *old, context_t *new);
-context_switch:
-    # Save caller's context (old)
-    sd s0, 0*8(a0)
+# void save_context(context_t *ctx);
+save_context:
     sd s1, 1*8(a0)
     sd s2, 2*8(a0)
     sd s3, 3*8(a0)
@@ -78,53 +71,31 @@ context_switch:
     sd s9, 9*8(a0)
     sd s10, 10*8(a0)
     sd s11, 11*8(a0)
-    sd sp, 12*8(a0)
-    sd ra, 13*8(a0)
+    ret
 
-    # Restore new context
-    ld s0, 0*8(a1)
-    ld s1, 1*8(a1)
-    ld s2, 2*8(a1)
-    ld s3, 3*8(a1)
-    ld s4, 4*8(a1)
-    ld s5, 5*8(a1)
-    ld s6, 6*8(a1)
-    ld s7, 7*8(a1)
-    ld s8, 8*8(a1)
-    ld s9, 9*8(a1)
-    ld s10, 10*8(a1)
-    ld s11, 11*8(a1)
-    ld sp, 12*8(a1)
-    ld ra, 13*8(a1)
-
-    # Jump to new task's PC
-    jr a1, 16*8  # But wait—we don't store PC in regs[14] yet!
+# void restore_context(context_t *ctx);
+restore_context:
+    ld s1, 1*8(a0)
+    ld s2, 2*8(a0)
+    ld s3, 3*8(a0)
+    ld s4, 4*8(a0)
+    ld s5, 5*8(a0)
+    ld s6, 6*8(a0)
+    ld s7, 7*8(a0)
+    ld s8, 8*8(a0)
+    ld s9, 9*8(a0)
+    ld s10, 10*8(a0)
+    ld s11, 11*8(a0)
+    ret
 
 ```
-
-⚠️ Problem: We can’t directly jump to a function pointer stored in memory from this point **and** restore all state cleanly in pure assembly without more setup.
-
-✅ Better approach: **Don’t store `pc` in the context struct**. Instead, design tasks to **resume from a known point** (like a loop), and use the context switch only to swap register stacks. We’ll use a **trampoline** idea.
-
-But for simplicity in **user-mode simulation**, let’s use a **cooperative yield** that returns to a scheduler loop.
+> `ra, sp, s0` are not saved in this section. 
 
 ---
 
-### ✅ Simpler & Practical Approach: Cooperative Yield with Register Save/Restore
+#### 3. Write the main program in C
 
-We’ll avoid full PC manipulation. Instead:
-
-- Each task runs in a loop.
-- When it calls `yield()`, it saves its state and returns to a **scheduler**.
-- The scheduler restores the next task.
-
-This avoids complex PC handling and works in user mode.
-
----
-
-### 📄 Full Working Example
-
-#### `main.c`
+`main.c`
 
 ```c
 #include <stdio.h>
@@ -133,18 +104,13 @@ This avoids complex PC handling and works in user mode.
 #include "context.h" 
 
 // ---------- Context definition ----------
-#define STACK_SIZE 2048
 #define WORK_LIMIT 10
 #define REPEATED_WORK 5
 
 // ---------- Global task state ----------
-static long stack1[STACK_SIZE / sizeof(long)];
-static long stack2[STACK_SIZE / sizeof(long)];
-
 static context_t ctx1, ctx2;
 static int current_task = 1;  // 1 -> task1, 2 -> task2
 static int task1_done = 0, task2_done = 0;
-uint64_t start, end;
 
 // Global Register - That saves the current status of the counter. 
 // Here we use the same address for both tasks, then it should be toggle between two tasks.
@@ -195,9 +161,6 @@ void yield(void) {
     if(task1_done && task2_done){
         printf("All tasks completed successfully.\n");
         printf("Simulation finished.\n");
-        
-        asm volatile ("rdcycle %0" : "=r" (end));
-        printf("Context switch took %lu cycles\n\n", end - start);
         exit(0);
     }
     else if (current_task == 1) {
@@ -212,10 +175,21 @@ void yield(void) {
     
     printf("oldAddr: 0x%x \t newAddr: 0x%x\n", old, new);
     printf("Context Switching...\n");
-
+    
     // Context switching
+    uint64_t start, end;
+    asm volatile ("rdcycle %0" : "=r" (start));
+    
     save_context(old);
+    printf("Current Saved!\n");
+
     restore_context(new);
+    printf("New Restored!\n");
+    
+    asm volatile ("rdcycle %0" : "=r" (end));
+    printf("Context switch took %lu cycles\n\n", end - start);
+
+    task_trampoline();
 }
 
 // ---------- Trampoline to enter task ----------
@@ -228,32 +202,24 @@ void task_trampoline(void) {
 }
 
 // ---------- Initialize context (set up stack & return address) ----------
-void init_context(context_t *ctx, long *stack_top) {
+void init_context(context_t *ctx) {
     // Initialize all saved registers to 0 (optional)
-    for (int i = 0; i < 14; i++) {
+    for (int i = 0; i < 11; i++) {
         ctx->regs[i] = 0;
     }
-    ctx->regs[12] = (long)stack_top;          // sp
-    ctx->regs[13] = (long)&task_trampoline;   // ra — where to return after restore
-
-    printf("&task_trampoline=0x%016lx\n", ctx->regs[13]);
 }
 
 // ---------- Main ----------
 int main() {
-    // Set up stacks (point to top)
-    long *sp1 = &stack1[STACK_SIZE / sizeof(long) - 1];
-    long *sp2 = &stack2[STACK_SIZE / sizeof(long) - 1];
-
-    init_context(&ctx1, sp1);
-    init_context(&ctx2, sp2);
+    init_context(&ctx1);
+    init_context(&ctx2);
 
     // Start task1
     current_task = 1;
 
     // Run context switch
-    asm volatile ("rdcycle %0" : "=r" (start));
     restore_context(&ctx1);
+    task_trampoline();
 
     return 0;
 }
@@ -261,54 +227,6 @@ int main() {
 ```
 
 > ⚠️ Note: This is a **simplified simulation**. In real OS, you’d use `mret`/`sret` and trap handlers. But under PK, this user-space cooperative switch is valid for **measuring overhead**.
-
-
-#### `switch.S`
-
-```assembly
-.text
-.globl save_context
-.globl restore_context
-
-# void save_context(context_t *ctx);
-save_context:
-    sd s0, 0*8(a0)
-    sd s1, 1*8(a0)
-    sd s2, 2*8(a0)
-    sd s3, 3*8(a0)
-    sd s4, 4*8(a0)
-    sd s5, 5*8(a0)
-    sd s6, 6*8(a0)
-    sd s7, 7*8(a0)
-    sd s8, 8*8(a0)
-    sd s9, 9*8(a0)
-    sd s10, 10*8(a0)
-    sd s11, 11*8(a0)
-    sd sp, 12*8(a0)
-    ret
-
-# void restore_context(context_t *ctx);
-restore_context:
-    ld s0, 0*8(a0)
-    ld s1, 1*8(a0)
-    ld s2, 2*8(a0)
-    ld s3, 3*8(a0)
-    ld s4, 4*8(a0)
-    ld s5, 5*8(a0)
-    ld s6, 6*8(a0)
-    ld s7, 7*8(a0)
-    ld s8, 8*8(a0)
-    ld s9, 9*8(a0)
-    ld s10, 10*8(a0)
-    ld s11, 11*8(a0)
-    ld sp, 12*8(a0)
-    ld ra, 13*8(a0)
-    ret
-
-```
-> `ra` is not saved in this section. 
-
-⚠️ Warnning: During the memory allocation time, the pointer to the `trampoline()` function was saved to the memory as the return address (`ra`). If we save the `ra` during the each context switching, it overwrites the `trampoline()` function pointer with current executing instruction (current `return address`). Then it cause an **unexpected behaviour or infinite loop**.  So we do not save the `ra`, but we restore the `ra` which pointed to the `trampoline()` function.
 
 ---
 
@@ -321,13 +239,13 @@ spike pk ctx_switch
 
 You should see:
 - Alternating prints from Task1 and Task2.
-- One line: `Context switch took XXXX cycles`.
+- One line: `Context switch took XXXX cycles` for each context switching.
 
 > 💡 On Spike, cycle counts are **instruction counts** (not real time), but consistent for relative measurement.
 
 ---
 
 ### 🔍 What This Measures
-- The cost of **saving 14 registers + restoring 14 registers** for complete process.
+- The cost of **saving 11 registers + restoring 11 registers** for complete process.
 - **Does NOT include** trap entry/exit (since we’re in user mode).
 - For **real OS context switch**, you’d add trap handling cost (which you can measure separately via `ecall` + custom handler in M-mode).
