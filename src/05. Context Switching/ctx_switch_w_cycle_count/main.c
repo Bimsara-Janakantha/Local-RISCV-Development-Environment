@@ -14,14 +14,10 @@
 #include "context.h" 
 
 // ---------- Context definition ----------
-#define STACK_SIZE 2048
 #define WORK_LIMIT 10
 #define REPEATED_WORK 5
 
 // ---------- Global task state ----------
-static long stack1[STACK_SIZE / sizeof(long)];
-static long stack2[STACK_SIZE / sizeof(long)];
-
 static context_t ctx1, ctx2;
 static int current_task = 1;  // 1 -> task1, 2 -> task2
 static int task1_done = 0, task2_done = 0;
@@ -116,23 +112,17 @@ void task_trampoline(void) {
 }
 
 // ---------- Initialize context (set up stack & return address) ----------
-void init_context(context_t *ctx, long *stack_top) {
+void init_context(context_t *ctx) {
     // Initialize all saved registers to 0 (optional)
-    for (int i = 0; i < 14; i++) {
+    for (int i = 0; i < 11; i++) {
         ctx->regs[i] = 0;
     }
-    ctx->regs[12] = (long)stack_top;          // sp
-    //ctx->regs[13] = (long)&task_trampoline;   // ra — where to return after restore
 }
 
 // ---------- Main ----------
 int main() {
-    // Set up stacks (point to top)
-    long *sp1 = &stack1[STACK_SIZE / sizeof(long) - 1];
-    long *sp2 = &stack2[STACK_SIZE / sizeof(long) - 1];
-
-    init_context(&ctx1, sp1);
-    init_context(&ctx2, sp2);
+    init_context(&ctx1);
+    init_context(&ctx2);
 
     // Start task1
     current_task = 1;

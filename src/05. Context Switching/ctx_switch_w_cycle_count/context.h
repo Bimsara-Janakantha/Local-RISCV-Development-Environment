@@ -2,7 +2,7 @@
 #define CONTEXT_H
 
 typedef struct {
-    long regs[14];  // s0-s11 (12 regs) + sp + ra
+    long regs[11];  // s1-s11 (11 regs)
 } context_t;
 
 #endif
