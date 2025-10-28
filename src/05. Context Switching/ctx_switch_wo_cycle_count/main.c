@@ -116,8 +116,6 @@ void init_context(context_t *ctx, long *stack_top) {
     }
     ctx->regs[12] = (long)stack_top;          // sp
     ctx->regs[13] = (long)&task_trampoline;   // ra — where to return after restore
-
-    printf("&task_trampoline=0x%016lx\n", ctx->regs[13]);
 }
 
 // ---------- Main ----------

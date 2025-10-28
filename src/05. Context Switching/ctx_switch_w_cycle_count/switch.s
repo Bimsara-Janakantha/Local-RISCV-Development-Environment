@@ -17,13 +17,17 @@ save_context:
     sd s10, 10*8(a0)
     sd s11, 11*8(a0)
     sd sp, 12*8(a0)
-    sd ra, 13*8(a0)
+
+    # sd ra, 13*8(a0)  # Do not enable this line. 
+    # If this enables the current Return Address saves to the memory. 
+    # Then after the next context switching, program will return back 
+    # to that location, not to the initial location. Then program will crash.
+    
     ret
 
 # void restore_context(context_t *ctx);
 restore_context:
-    sd ra, 13*8(a0)
-    /*ld s0, 0*8(a0)
+    ld s0, 0*8(a0)
     ld s1, 1*8(a0)
     ld s2, 2*8(a0)
     ld s3, 3*8(a0)
@@ -35,6 +39,6 @@ restore_context:
     ld s9, 9*8(a0)
     ld s10, 10*8(a0)
     ld s11, 11*8(a0)
-    ld sp, 12*8(a0)*/
+    ld sp, 12*8(a0)
     ld ra, 13*8(a0)
     ret

@@ -1,4 +1,12 @@
-
+/*
+    Title: Measure Context Switching Overhead
+    Auther: Janakantha S.M.B.G.
+    Last Update: 28 Oct 2025   
+    
+    Note: This program should return the total cycle count spent for the whole task.
+          Here, after a context switch all callee-saved registers are saved to the memory (current task) 
+          and restore the values from the memory related to the next task. Then executes the newly loaded task.
+*/
 
 #include <stdio.h>
 #include <stdint.h>
@@ -16,8 +24,11 @@ static long stack2[STACK_SIZE / sizeof(long)];
 
 static context_t ctx1, ctx2;
 static int current_task = 1;  // 1 -> task1, 2 -> task2
-volatile long i = 0, j = 0;
 static int task1_done = 0, task2_done = 0;
+
+// Global Register - That saves the current status of the counter. 
+// Here we use the same address for both tasks, then it should be toggle between two tasks.
+register long i asm("s1");
 
 // ---------- Function declarations ----------
 extern void save_context(context_t *ctx);
@@ -44,11 +55,11 @@ void task1_func(void) {
 }
 
 void task2_func(void) {
-    while (j < WORK_LIMIT*REPEATED_WORK) {
-        j++;
-        printf("Task 2 \t Work: %ld\n", j);
-        if (j % WORK_LIMIT == 0) {
-            printf("Task2: %ld\n\n", j);
+    while (i < WORK_LIMIT*(REPEATED_WORK+2)) {
+        i++;
+        printf("Task 2 \t Work: %ld\n", i);
+        if (i % WORK_LIMIT == 0) {
+            printf("Task2: %ld\n\n", i);
             yield();
         }
     }
@@ -75,26 +86,20 @@ void yield(void) {
         new = &ctx1;
         current_task = 1;  // Switch to task 1
     }
-
-    uint64_t start, end;
-    asm volatile ("rdcycle %0" : "=r" (start));
     
     printf("oldAddr: 0x%x \t newAddr: 0x%x\n", old, new);
     printf("Context Switching...\n");
-
+    
     // Context switching
-    printf("Saving... \t\t ra=0x%016lu\n", old->regs[13]);
+    uint64_t start, end;
+    asm volatile ("rdcycle %0" : "=r" (start));
+    
     save_context(old);
-    printf("Context Saved!   \t ra=0x%016lu\n", old->regs[13]);
-
-    printf("Restoring... \t\t ra=0x%016lu\n", new->regs[13]);
     restore_context(new);
-    printf("Context Restored! \t ra=0x%016lu\n", new->regs[13]);
     
     asm volatile ("rdcycle %0" : "=r" (end));
     printf("Context switch took %lu cycles\n\n", end - start);
 
-    // Goto task_trampoline
     task_trampoline();
 }
 
@@ -105,7 +110,6 @@ void task_trampoline(void) {
     } else {
         task2_func();
     }
-    return;
 }
 
 // ---------- Initialize context (set up stack & return address) ----------
@@ -114,19 +118,24 @@ void init_context(context_t *ctx, long *stack_top) {
     for (int i = 0; i < 14; i++) {
         ctx->regs[i] = 0;
     }
+    ctx->regs[12] = (long)stack_top;          // sp
+    //ctx->regs[13] = (long)&task_trampoline;   // ra — where to return after restore
 }
 
 // ---------- Main ----------
 int main() {
     // Set up stacks (point to top)
-    long *sp1 = &stack1[STACK_SIZE / sizeof(long) - 10];
-    long *sp2 = &stack2[STACK_SIZE / sizeof(long) - 10];
+    long *sp1 = &stack1[STACK_SIZE / sizeof(long) - 1];
+    long *sp2 = &stack2[STACK_SIZE / sizeof(long) - 1];
 
     init_context(&ctx1, sp1);
     init_context(&ctx2, sp2);
 
     // Start task1
     current_task = 1;
+
+    // Run context switch
+    restore_context(&ctx1);
     task_trampoline();
 
     return 0;
