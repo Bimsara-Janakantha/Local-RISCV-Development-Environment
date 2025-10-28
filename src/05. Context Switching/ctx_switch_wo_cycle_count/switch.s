@@ -16,7 +16,11 @@ save_context:
     sd s9, 9*8(a0)
     sd s10, 10*8(a0)
     sd s11, 11*8(a0)
-    sd sp, 12*8(a0)
+
+    # sd sp, 12*8(a0) # Do not need to enable this line. 
+    # Because after the switching the program doesn't goes to the previous point. 
+    # It switch task and continue the remaining process. Thus last stack not neccessary.
+    # So it need to reset to the initial point. Otherwise stack overflow can be occured.
 
     # sd ra, 13*8(a0)  # Do not enable this line. 
     # If this enables the current Return Address saves to the memory. 
