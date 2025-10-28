@@ -1,8 +1,4 @@
-# Simulate context switching
-
-Let’s clarify your goal and options.
-
----
+# Simulate Context Switching
 
 ## 🔍 What Is "Actual" Context Switching?
 
@@ -21,6 +17,8 @@ This **cannot be done in pure user mode** — you need **Supervisor (S-mode) or 
 ---
 
 ## ✅ Your Options to Simulate *Actual* Context Switching
+
+> Note: Before directly jump into the *Actual Context Switching*, get familiar with *context switching under pk* and get the idea "What is context switching and how it works". To do that use the directories `ctx_switch_wo_cycle_count` and `ctx_switch_w_cycle_count`.
 
 Since you’re using **Spike**, you have **three main paths**:
 
@@ -43,7 +41,7 @@ Since you’re using **Spike**, you have **three main paths**:
 **Tools**:
 - `riscv64-unknown-elf-gcc` (bare-metal toolchain)
 - Custom linker script
-- Handwritten trap handler in `.S`
+- Handwritten trap handler in `.s`
 
 > ✅ **Best for your goal**: You can measure **exact cycles** for full context switch, including trap entry/exit.
 
@@ -109,11 +107,11 @@ make -j$(nproc)
 ### 🔹 Step 2: Minimal Runtime Setup
 
 Create:
-- `crt0.S`: Startup code (set stack, clear BSS, call `main`)
+- `crt0.s`: Startup code (set stack, clear BSS, call `main`)
 - `linker.ld`: Linker script (define memory layout, stack)
 - `main.c`: Your C code
 
-Example `crt0.S`:
+Example `crt0.s`:
 ```assembly
 .section .text.boot
 .globl _start
@@ -142,7 +140,7 @@ SECTIONS {
 
 ### 🔹 Step 3: Implement Trap Handler
 
-In `trap.S`:
+In `trap.s`:
 ```assembly
 .globl trap_handler
 trap_handler:
