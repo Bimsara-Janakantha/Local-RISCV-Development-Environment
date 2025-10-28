@@ -43,6 +43,6 @@ restore_context:
     ld s9, 9*8(a0)
     ld s10, 10*8(a0)
     ld s11, 11*8(a0)
-    ld sp, 12*8(a0)
-    ld ra, 13*8(a0)
+    ld sp, 12*8(a0)     # Reset stack pointer
+    ld ra, 13*8(a0)     # Reset return address (return to task_trampoline())
     ret
