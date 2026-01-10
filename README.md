@@ -76,6 +76,20 @@ $RISCV/bin/riscv64-unknown-linux-gnu-gcc --version
 which riscv64-unknown-linux-gnu-gcc
 ```
 
+Install the toolchain (Newlib - baremetal):
+```bash
+./configure --prefix=$RISCV
+make
+```
+> This will install the baremetal toolchain in the local profile, not system-wide.
+
+Verify:
+```bash
+$RISCV/bin/riscv64-unknown-elf-gcc --version
+# or
+which riscv64-unknown-elf-gcc
+```
+
 ---
 
 ## 🧪 3. Build Spike (RISC-V ISA Simulator)
