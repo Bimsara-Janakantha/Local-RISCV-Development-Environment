@@ -95,6 +95,17 @@ make
 make install
 ```
 > This will install the spike in the local profile, not system-wide.
+> If you get error saying
+```bash
+hecking build system type... x86_64-pc-linux-gnu
+checking host system type... x86_64-pc-linux-gnu
+checking for gcc... gcc
+checking whether the C compiler works... no
+configure: error: in '/path/to/project/riscv-isa-sim/build':
+configure: error: C compiler cannot create executables
+See 'config.log' for more details
+```
+> use `export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin` and re try
 
 Verify:
 ```bash
